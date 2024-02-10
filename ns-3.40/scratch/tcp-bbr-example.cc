@@ -71,15 +71,18 @@ Time prevTime = Seconds (0);
 static void
 TraceThroughput (Ptr<FlowMonitor> monitor)
 {
-  FlowMonitor::FlowStatsContainer stats = monitor->GetFlowStats ();
-  auto itr = stats.begin ();
-  Time curTime = Now ();
-  std::ofstream thr (dir + "/throughput.dat", std::ios::out | std::ios::app);
-  thr <<  curTime << " " << 8 * (itr->second.txBytes - prev) / (1000 * 1000 * (curTime.GetSeconds () - prevTime.GetSeconds ())) << std::endl;
+  FlowMonitor::FlowStatsContainer stats = monitor->GetFlowStats();
+  auto itr = stats.begin();
+  Time curTime = Now();
+  std::ofstream thr(dir + "/throughput.dat", std::ios::out | std::ios::app);
+
+  // Convert time to seconds and use GetSeconds()
+  thr << curTime.GetSeconds() << " " << 8 * (itr->second.txBytes - prev) / (1000 * 1000 * (curTime.GetSeconds() - prevTime.GetSeconds())) << std::endl;
+
   prevTime = curTime;
   prev = itr->second.txBytes;
-  Simulator::Schedule (Seconds (0.2), &TraceThroughput, monitor);
-}
+
+  Simulator::Schedule(Seconds(0.2), &TraceThroughput, monitor);}
 
 // Check the queue size
 void CheckQueueSize (Ptr<QueueDisc> qd)
@@ -223,9 +226,9 @@ int main (int argc, char *argv [])
   // Uncomment the following three lines to generate plots for Congestion
   // Window, sender side throughput and queue occupancy on the bottleneck link.
   //
-  // system (("cp -R PlotScripts/gnuplotScriptCwnd " + dir).c_str ());
-  // system (("cp -R PlotScripts/gnuplotScriptThroughput " + dir).c_str ());
-  // system (("cp -R PlotScripts/gnuplotScriptQueueSize " + dir).c_str ());
+  system (("cp -R PlotScripts/gnuplotScriptCwnd " + dir).c_str ());
+  system (("cp -R PlotScripts/gnuplotScriptThroughput " + dir).c_str ());
+  system (("cp -R PlotScripts/gnuplotScriptQueueSize " + dir).c_str ());
 
   // Trace the queue occupancy on the second interface of R1
   tch.Uninstall (routers.Get (0)->GetDevice (1));
