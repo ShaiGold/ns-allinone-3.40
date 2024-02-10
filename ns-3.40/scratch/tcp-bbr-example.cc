@@ -26,6 +26,8 @@
 //  Sender -------------- R1 -------------- R2 -------------- Receiver
 //              5ms               10ms               5ms
 //
+// Sender2 25 ms
+
 // The link between R1 and R2 is a bottleneck link with 10 Mbps. All other
 // links are 1000 Mbps.
 //
@@ -69,12 +71,17 @@ Time prevTime = Seconds (0);
 
 // Calculate throughput
 static void
-TraceThroughput (Ptr<FlowMonitor> monitor)
+TraceThroughput(Ptr<FlowMonitor> monitor)
 {
+  int connectionIndex = 0;
   FlowMonitor::FlowStatsContainer stats = monitor->GetFlowStats();
   auto itr = stats.begin();
   Time curTime = Now();
-  std::ofstream thr(dir + "/throughput.dat", std::ios::out | std::ios::app);
+
+  // Generate unique throughput file name based on connection index
+  std::string fileName = dir + "/throughput" + std::to_string(connectionIndex) + ".dat";
+
+  std::ofstream thr(fileName, std::ios::out | std::ios::app);
 
   // Convert time to seconds and use GetSeconds()
   thr << curTime.GetSeconds() << " " << 8 * (itr->second.txBytes - prev) / (1000 * 1000 * (curTime.GetSeconds() - prevTime.GetSeconds())) << std::endl;
@@ -82,7 +89,30 @@ TraceThroughput (Ptr<FlowMonitor> monitor)
   prevTime = curTime;
   prev = itr->second.txBytes;
 
-  Simulator::Schedule(Seconds(0.2), &TraceThroughput, monitor);}
+  Simulator::Schedule(Seconds(0.2), &TraceThroughput, monitor, connectionIndex);
+}
+
+static void
+TraceThroughput1(Ptr<FlowMonitor> monitor)
+{
+  int connectionIndex = 1;
+  FlowMonitor::FlowStatsContainer stats = monitor->GetFlowStats();
+  auto itr = stats.begin();
+  Time curTime = Now();
+
+  // Generate unique throughput file name based on connection index
+  std::string fileName = dir + "/throughput" + std::to_string(connectionIndex) + ".dat";
+
+  std::ofstream thr(fileName, std::ios::out | std::ios::app);
+
+  // Convert time to seconds and use GetSeconds()
+  thr << curTime.GetSeconds() << " " << 8 * (itr->second.txBytes - prev) / (1000 * 1000 * (curTime.GetSeconds() - prevTime.GetSeconds())) << std::endl;
+
+  prevTime = curTime;
+  prev = itr->second.txBytes;
+
+  Simulator::Schedule(Seconds(0.2), &TraceThroughput1, monitor, connectionIndex);
+}
 
 // Check the queue size
 void CheckQueueSize (Ptr<QueueDisc> qd)
@@ -95,162 +125,189 @@ void CheckQueueSize (Ptr<QueueDisc> qd)
 }
 
 // Trace congestion window
-static void CwndTracer (Ptr<OutputStreamWrapper> stream, uint32_t oldval, uint32_t newval)
+static void CwndTracer(Ptr<OutputStreamWrapper> stream, uint32_t oldval, uint32_t newval)
 {
-  *stream->GetStream () << Simulator::Now ().GetSeconds () << " " << newval / 1448.0 << std::endl;
+  *stream->GetStream() << Simulator::Now().GetSeconds() << " " << newval / 1448.0 << std::endl;
 }
 
-void TraceCwnd (uint32_t nodeId, uint32_t socketId)
+void TraceCwnd(uint32_t nodeId, uint32_t socketId, int connectionIndex)
 {
   AsciiTraceHelper ascii;
-  Ptr<OutputStreamWrapper> stream = ascii.CreateFileStream (dir + "/cwnd.dat");
-  Config::ConnectWithoutContext ("/NodeList/" + std::to_string (nodeId) + "/$ns3::TcpL4Protocol/SocketList/" + std::to_string (socketId) + "/CongestionWindow", MakeBoundCallback (&CwndTracer, stream));
+  
+  // Generate unique congestion window file name based on connection index
+  std::string fileName = dir + "/cwnd" + std::to_string(connectionIndex) + ".dat";
+  
+  Ptr<OutputStreamWrapper> stream = ascii.CreateFileStream(fileName);
+  Config::ConnectWithoutContext("/NodeList/" + std::to_string(nodeId) + "/$ns3::TcpL4Protocol/SocketList/" + std::to_string(socketId) + "/CongestionWindow", MakeBoundCallback(&CwndTracer, stream));
 }
 
 int main (int argc, char *argv [])
 {
-  // Naming the output directory using local system time
-  time_t rawtime;
-  struct tm * timeinfo;
-  char buffer [80];
-  time (&rawtime);
-  timeinfo = localtime (&rawtime);
-  strftime (buffer, sizeof (buffer), "%d-%m-%Y-%I-%M-%S", timeinfo);
-  std::string currentTime (buffer);
+    // Naming the output directory using local system time
+    time_t rawtime;
+    struct tm * timeinfo;
+    char buffer [80];
+    time (&rawtime);
+    timeinfo = localtime (&rawtime);
+    strftime (buffer, sizeof (buffer), "%d-%m-%Y-%I-%M-%S", timeinfo);
+    std::string currentTime (buffer);
 
-  std::string tcpTypeId = "TcpBbr";
-  std::string queueDisc = "FifoQueueDisc";
-  uint32_t delAckCount = 2;
-  bool bql = true;
-  bool enablePcap = false;
-  Time stopTime = Seconds (100);
+    std::string tcpTypeId = "TcpBbr";
+    std::string queueDisc = "FifoQueueDisc";
+    uint32_t delAckCount = 2;
+    bool bql = true;
+    bool enablePcap = false;
+    Time stopTime = Seconds (100);
 
-  CommandLine cmd (__FILE__);
-  cmd.AddValue ("tcpTypeId", "Transport protocol to use: TcpNewReno, TcpBbr", tcpTypeId);
-  cmd.AddValue ("delAckCount", "Delayed ACK count", delAckCount);
-  cmd.AddValue ("enablePcap", "Enable/Disable pcap file generation", enablePcap);
-  cmd.AddValue ("stopTime", "Stop time for applications / simulation time will be stopTime + 1", stopTime);
-  cmd.Parse (argc, argv);
+    CommandLine cmd (__FILE__);
+    cmd.AddValue ("tcpTypeId", "Transport protocol to use: TcpNewReno, TcpBbr", tcpTypeId);
+    cmd.AddValue ("delAckCount", "Delayed ACK count", delAckCount);
+    cmd.AddValue ("enablePcap", "Enable/Disable pcap file generation", enablePcap);
+    cmd.AddValue ("stopTime", "Stop time for applications / simulation time will be stopTime + 1", stopTime);
+    cmd.Parse (argc, argv);
 
-  queueDisc = std::string ("ns3::") + queueDisc;
+    queueDisc = std::string ("ns3::") + queueDisc;
 
-  Config::SetDefault ("ns3::TcpL4Protocol::SocketType", StringValue ("ns3::" + tcpTypeId));
-  Config::SetDefault ("ns3::TcpSocket::SndBufSize", UintegerValue (4194304));
-  Config::SetDefault ("ns3::TcpSocket::RcvBufSize", UintegerValue (6291456));
-  Config::SetDefault ("ns3::TcpSocket::InitialCwnd", UintegerValue (10));
-  Config::SetDefault ("ns3::TcpSocket::DelAckCount", UintegerValue (delAckCount));
-  Config::SetDefault ("ns3::TcpSocket::SegmentSize", UintegerValue (1448));
-  Config::SetDefault ("ns3::DropTailQueue<Packet>::MaxSize", QueueSizeValue (QueueSize ("1p")));
-  Config::SetDefault (queueDisc + "::MaxSize", QueueSizeValue (QueueSize ("100p")));
+    Config::SetDefault ("ns3::TcpL4Protocol::SocketType", StringValue ("ns3::" + tcpTypeId));
+    Config::SetDefault ("ns3::TcpSocket::SndBufSize", UintegerValue (4194304));
+    Config::SetDefault ("ns3::TcpSocket::RcvBufSize", UintegerValue (6291456));
+    Config::SetDefault ("ns3::TcpSocket::InitialCwnd", UintegerValue (10));
+    Config::SetDefault ("ns3::TcpSocket::DelAckCount", UintegerValue (delAckCount));
+    Config::SetDefault ("ns3::TcpSocket::SegmentSize", UintegerValue (1448));
+    Config::SetDefault ("ns3::DropTailQueue<Packet>::MaxSize", QueueSizeValue (QueueSize ("1p")));
+    Config::SetDefault (queueDisc + "::MaxSize", QueueSizeValue (QueueSize ("100p")));
 
-  NodeContainer sender, receiver;
-  NodeContainer routers;
-  sender.Create (1);
-  receiver.Create (1);
-  routers.Create (2);
+    NodeContainer senders, receivers;
+    NodeContainer routers;
+    senders.Create(2);
+    receivers.Create(2);
+    routers.Create(2);
 
-  // Create the point-to-point link helpers
-  PointToPointHelper bottleneckLink;
-  bottleneckLink.SetDeviceAttribute  ("DataRate", StringValue ("10Mbps"));
-  bottleneckLink.SetChannelAttribute ("Delay", StringValue ("10ms"));
+    // Create the point-to-point link helpers
+    PointToPointHelper bottleneckLink;
+    bottleneckLink.SetDeviceAttribute("DataRate", StringValue("10Mbps"));
+    bottleneckLink.SetChannelAttribute("Delay", StringValue("10ms"));
 
-  PointToPointHelper edgeLink;
-  edgeLink.SetDeviceAttribute  ("DataRate", StringValue ("1000Mbps"));
-  edgeLink.SetChannelAttribute ("Delay", StringValue ("5ms"));
+    PointToPointHelper edgeLink;
+    edgeLink.SetDeviceAttribute("DataRate", StringValue("1000Mbps"));
+    edgeLink.SetChannelAttribute("Delay", StringValue("5ms"));
 
-  // Create NetDevice containers
-  NetDeviceContainer senderEdge = edgeLink.Install (sender.Get (0), routers.Get (0));
-  NetDeviceContainer r1r2 = bottleneckLink.Install (routers.Get (0), routers.Get (1));
-  NetDeviceContainer receiverEdge = edgeLink.Install (routers.Get (1), receiver.Get (0));
+    PointToPointHelper edgeLink25ms;
+    edgeLink25ms.SetDeviceAttribute("DataRate", StringValue("1000Mbps"));
+    edgeLink25ms.SetChannelAttribute("Delay", StringValue("25ms"));
 
-  // Install Stack
-  InternetStackHelper internet;
-  internet.Install (sender);
-  internet.Install (receiver);
-  internet.Install (routers);
+    // Create NetDevice containers
+    NetDeviceContainer senderEdges[2];
+    Ipv4InterfaceContainer ir1s[2];
+    TrafficControlHelper tch;
 
-  // Configure the root queue discipline
-  TrafficControlHelper tch;
-  tch.SetRootQueueDisc (queueDisc);
+    for (uint32_t connectionIndex = 0; connectionIndex < 2; ++connectionIndex) {
+        if (connectionIndex == 0)
+            senderEdges[connectionIndex] = edgeLink.Install(senders.Get(connectionIndex), routers.Get(0));
+        else
+            senderEdges[connectionIndex] = edgeLink25ms.Install(senders.Get(connectionIndex), routers.Get(0));
 
-  if (bql)
-    {
-      tch.SetQueueLimits ("ns3::DynamicQueueLimits", "HoldTime", StringValue ("1000ms"));
+        NetDeviceContainer r1r2 = bottleneckLink.Install(routers.Get(0), routers.Get(1));
+        NetDeviceContainer receiverEdge = edgeLink.Install(routers.Get(1), receivers.Get(connectionIndex));
+
+        // Install Stack, Configure the root queue discipline, and Assign IP addresses
+        InternetStackHelper internet;
+        internet.Install(senders);//.Get(connectionIndex));
+        internet.Install(receivers);//.Get(connectionIndex));
+        internet.Install(routers);
+
+        tch.SetRootQueueDisc(queueDisc);
+
+        if (bql) {
+            tch.SetQueueLimits("ns3::DynamicQueueLimits", "HoldTime", StringValue("1000ms"));
+        }
+
+        tch.Install(senderEdges[connectionIndex]);
+
+        Ipv4AddressHelper ipv4;
+        ipv4.SetBase(std::string("10.") + std::to_string(connectionIndex)+std::string(".0.0"), "255.255.255.0");
+
+        Ipv4InterfaceContainer i1i2 = ipv4.Assign(r1r2);
+
+        ipv4.NewNetwork();
+        Ipv4InterfaceContainer is1 = ipv4.Assign(senderEdges[connectionIndex]);
+
+        ipv4.NewNetwork();
+        ir1s[connectionIndex] = ipv4.Assign(receiverEdge);
+
+        // Populate routing tables
+        Ipv4GlobalRoutingHelper::PopulateRoutingTables();
+
     }
 
-  tch.Install (senderEdge);
-  tch.Install (receiverEdge);
 
-  // Assign IP addresses
-  Ipv4AddressHelper ipv4;
-  ipv4.SetBase ("10.0.0.0", "255.255.255.0");
+    // Define the port outside the loop since it's constant for all connections
+    uint16_t port = 50001;
 
-  Ipv4InterfaceContainer i1i2 = ipv4.Assign (r1r2);
+    for (uint32_t connectionIndex = 0; connectionIndex < 2; ++connectionIndex) {
+        // Rest of your code...
 
-  ipv4.NewNetwork ();
-  Ipv4InterfaceContainer is1 = ipv4.Assign (senderEdge);
+        // Install application on the sender
+        BulkSendHelper source("ns3::TcpSocketFactory", InetSocketAddress(ir1s[connectionIndex].GetAddress(1), port));
+        source.SetAttribute("MaxBytes", UintegerValue(0));
+        ApplicationContainer sourceApps = source.Install(senders.Get(connectionIndex));
+        sourceApps.Start(Seconds(0.0));
+        Simulator::Schedule(Seconds(0.2), &TraceCwnd, 0, 0 ,connectionIndex);  // Pass connectionIndex as the last argument
+        sourceApps.Stop(stopTime);
 
-  ipv4.NewNetwork ();
-  Ipv4InterfaceContainer ir1 = ipv4.Assign (receiverEdge);
-
-  // Populate routing tables
-  Ipv4GlobalRoutingHelper::PopulateRoutingTables ();
-
-  // Select sender side port
-  uint16_t port = 50001;
-
-  // Install application on the sender
-  BulkSendHelper source ("ns3::TcpSocketFactory", InetSocketAddress (ir1.GetAddress (1), port));
-  source.SetAttribute ("MaxBytes", UintegerValue (0));
-  ApplicationContainer sourceApps = source.Install (sender.Get (0));
-  sourceApps.Start (Seconds (0.0));
-  Simulator::Schedule (Seconds (0.2), &TraceCwnd, 0, 0);
-  sourceApps.Stop (stopTime);
-
-  // Install application on the receiver
-  PacketSinkHelper sink ("ns3::TcpSocketFactory", InetSocketAddress (Ipv4Address::GetAny (), port));
-  ApplicationContainer sinkApps = sink.Install (receiver.Get (0));
-  sinkApps.Start (Seconds (0.0));
-  sinkApps.Stop (stopTime);
-
-  // Create a new directory to store the output of the program
-  dir = "bbr-results/" + currentTime + "/";
-  std::string dirToSave = "mkdir -p " + dir;
-  system (dirToSave.c_str ());
-
-  // The plotting scripts are provided in the following repository, if needed:
-  // https://github.com/mohittahiliani/BBR-Validation/
-  //
-  // Download 'PlotScripts' directory (which is inside ns-3 scripts directory)
-  // from the link given above and place it in the ns-3 root directory.
-  // Uncomment the following three lines to generate plots for Congestion
-  // Window, sender side throughput and queue occupancy on the bottleneck link.
-  //
-  system (("cp -R PlotScripts/gnuplotScriptCwnd " + dir).c_str ());
-  system (("cp -R PlotScripts/gnuplotScriptThroughput " + dir).c_str ());
-  system (("cp -R PlotScripts/gnuplotScriptQueueSize " + dir).c_str ());
-
-  // Trace the queue occupancy on the second interface of R1
-  tch.Uninstall (routers.Get (0)->GetDevice (1));
-  QueueDiscContainer qd;
-  qd = tch.Install (routers.Get (0)->GetDevice (1));
-  Simulator::ScheduleNow (&CheckQueueSize, qd.Get (0));
-
-  // Generate PCAP traces if it is enabled
-  if (enablePcap)
-    {
-      system ((dirToSave + "/pcap/").c_str ());
-      bottleneckLink.EnablePcapAll (dir + "/pcap/bbr", true);
+        // Install application on the receiver
+        PacketSinkHelper sink("ns3::TcpSocketFactory", InetSocketAddress(Ipv4Address::GetAny(), port));
+        ApplicationContainer sinkApps = sink.Install(receivers.Get(connectionIndex));
+        sinkApps.Start(Seconds(0.0));
+        sinkApps.Stop(stopTime);
     }
+    
+    // Create a new directory to store the output of the program
+    dir = "bbr-results/" + currentTime + "/";
+    std::string dirToSave = "mkdir -p " + dir;
+    system (dirToSave.c_str ());
 
-  // Check for dropped packets using Flow Monitor
-  FlowMonitorHelper flowmon;
-  Ptr<FlowMonitor> monitor = flowmon.InstallAll ();
-  Simulator::Schedule (Seconds (0 + 0.000001), &TraceThroughput, monitor);
+    // The plotting scripts are provided in the following repository, if needed:
+    // https://github.com/mohittahiliani/BBR-Validation/
+    //
+    // Download 'PlotScripts' directory (which is inside ns-3 scripts directory)
+    // from the link given above and place it in the ns-3 root directory.
+    // Uncomment the following three lines to generate plots for Congestion
+    // Window, sender side throughput and queue occupancy on the bottleneck link.
+    //
+    system (("cp -R PlotScripts/gnuplotScriptCwnd " + dir).c_str ());
+    system (("cp -R PlotScripts/gnuplotScriptThroughput " + dir).c_str ());
+    system (("cp -R PlotScripts/gnuplotScriptQueueSize " + dir).c_str ());
 
-  Simulator::Stop (stopTime + TimeStep (1));
-  Simulator::Run ();
-  Simulator::Destroy ();
+    // Trace the queue occupancy on the second interface of R1
+    tch.Uninstall (routers.Get (0)->GetDevice (1));
+    QueueDiscContainer qd;
+    qd = tch.Install (routers.Get (0)->GetDevice (1));
+      Simulator::ScheduleNow (&CheckQueueSize, qd.Get (0));
 
-  return 0;
-}
+    // Generate PCAP traces if it is enabled
+    if (enablePcap)
+      {
+        system ((dirToSave + "/pcap/").c_str ());
+        bottleneckLink.EnablePcapAll (dir + "/pcap/bbr", true);
+      }
+    
+    // Check for dropped packets using Flow Monitor
+    FlowMonitorHelper flowmon;
+    Ptr<FlowMonitor> monitor = flowmon.InstallAll ();
+    Simulator::Schedule (Seconds (0 + 0.000001), &TraceThroughput, monitor);
+    
+    // Create FlowMonitorHelper for the second connection
+    FlowMonitorHelper flowmon2;
+    Ptr<FlowMonitor> monitor2 = flowmon2.InstallAll();
+
+    // Schedule TraceThroughput for the second connection
+    Simulator::Schedule(Seconds(0 + 0.000001), &TraceThroughput1, monitor2);
+
+
+    Simulator::Stop (stopTime + TimeStep (1));
+    Simulator::Run ();
+    Simulator::Destroy ();
+    
+    return 0;
+}   
