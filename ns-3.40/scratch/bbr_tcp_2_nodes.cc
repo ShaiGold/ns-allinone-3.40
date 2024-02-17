@@ -65,10 +65,10 @@ int main (int argc, char * argv[]){
     internet.Install(senders);
     internet.Install(receivers);
     internet.Install(routers);
-
+    
     //assign ip addresses
     Ipv4AddressHelper ipv4;
-
+    ipv4.NewNetwork();
     ipv4.SetBase("10.1.1.0", "255.255.255.0");
     Ipv4InterfaceContainer is1 = ipv4.Assign(senderEdge1);
     Ipv4InterfaceContainer is2 = ipv4.Assign(senderEdge2);
@@ -77,18 +77,29 @@ int main (int argc, char * argv[]){
     Ipv4InterfaceContainer il = ipv4.Assign(r1r2);
 
     ipv4.SetBase("10.1.3.0", "255.255.255.0");
-    Ipv4InterfaceContainer ir1 = ipv4.Assign(receiverEdge1);
     Ipv4InterfaceContainer ir2 = ipv4.Assign(receiverEdge2);
+
+    Ipv4InterfaceContainer ir1 = ipv4.Assign(receiverEdge1);
 
     // Populate routing tables
     Ipv4GlobalRoutingHelper::PopulateRoutingTables();
-
     // Set tcp connection
     uint16_t port1 = 8;
     uint16_t port2 = 9;
     
 
     // Set up Source app
+    // Static routes for Router 1
+    /*
+    Ptr<Ipv4StaticRouting> staticRoutingR1 = Ipv4RoutingHelper::GetRouting<Ipv4StaticRouting>(routers.Get(0)->GetObject<Ipv4>());
+    staticRoutingR1->AddHostRouteTo(Ipv4Address("10.1.3.1"), Ipv4Address("10.1.1.1"), 1); // Route to Receiver 1
+    staticRoutingR1->AddHostRouteTo(Ipv4Address("10.1.3.2"), Ipv4Address("10.1.2.1"), 0); // Route to Receiver 2
+
+    // Static routes for Router 2
+    Ptr<Ipv4StaticRouting> staticRoutingR2 = Ipv4RoutingHelper::GetRouting<Ipv4StaticRouting>(routers.Get(1)->GetObject<Ipv4>());
+    staticRoutingR2->AddHostRouteTo(Ipv4Address("10.1.1.1"), Ipv4Address("10.1.2.2"), 1); // Route to Sender 1
+    staticRoutingR2->AddHostRouteTo(Ipv4Address("10.1.2.2"), Ipv4Address("10.1.3.1"), 0); // Route to Sender 2*/
+
     Address sinkAddress1(InetSocketAddress(Ipv4Address::GetAny(),port1));
     BulkSendHelper source1("ns3::TcpSocketFactory", InetSocketAddress(ir1.GetAddress(1), port1));
     source1.SetAttribute("MaxBytes", UintegerValue(0));
@@ -126,6 +137,9 @@ int main (int argc, char * argv[]){
     
     //anim.SetConstantPosition (nodes.Get(0), 0, 5);
     //anim.SetConstantPosition (nodes.Get(1), 10, 5);
+    Simulator::Schedule (Seconds (1), &Ipv4GlobalRoutingHelper::RecomputeRoutingTables);
+    
+    //Ipv4GlobalRoutingHelper::RecomputeRoutingTables();
 
     Simulator::Run();
 
