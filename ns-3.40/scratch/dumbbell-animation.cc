@@ -27,6 +27,8 @@
 #include "ns3/point-to-point-layout-module.h"
 #include "ns3/bulk-send-helper.h"
 #include "ns3/tcp-bbr.h"
+#include "ns3/flow-monitor-module.h"
+
 using namespace ns3;
 
 int main (int argc, char *argv[])
@@ -117,9 +119,16 @@ int main (int argc, char *argv[])
   
   // Set up the acutal simulation
   Ipv4GlobalRoutingHelper::PopulateRoutingTables ();
+  Ptr<FlowMonitor> flowMonitor;
+  FlowMonitorHelper flowHelper;
+  flowMonitor = flowHelper.InstallAll();
+
+  Simulator::Stop(stopTime);
 
   Simulator::Run ();
   std::cout << "Animation Trace file created:" << animFile.c_str ()<< std::endl;
+  flowMonitor->SerializeToXmlFile("flowmon.xml", true, true);
+
   Simulator::Destroy ();
   return 0;
 }
