@@ -44,9 +44,12 @@ int main (int argc, char *argv[])
   Config::SetDefault("ns3::TcpSocket::DelAckCount", UintegerValue(2));
   Config::SetDefault("ns3::TcpSocket::SegmentSize", UintegerValue(1448));
   Config::SetDefault("ns3::DropTailQueue<Packet>::MaxSize", QueueSizeValue(QueueSize("1p")));
-  uint32_t    nLeftLeaf = 2;
-  uint32_t    nRightLeaf = 2;
+  Config::SetDefault ("ns3::TcpL4Protocol::SocketType", StringValue ("ns3::TcpBbr"));
+  Time stopTime = Seconds(100);
   uint32_t    nLeaf = 2; // If non-zero, number of both left and right
+
+  uint32_t    nLeftLeaf = nLeaf;
+  uint32_t    nRightLeaf = nLeaf;
   std::string animFile = "dumbbell-animation.xml" ;  // Name of file for animation output
 
   CommandLine cmd;
@@ -56,11 +59,6 @@ int main (int argc, char *argv[])
   cmd.AddValue ("animFile",  "File Name for Animation Output", animFile);
 
   cmd.Parse (argc,argv);
-  if (nLeaf > 0)
-    {
-      nLeftLeaf = nLeaf;
-      nRightLeaf = nLeaf;
-    }
 
   // Create the point-to-point link helpers
   PointToPointHelper pointToPointRouter;
@@ -71,7 +69,7 @@ int main (int argc, char *argv[])
   pointToPointLeaf1.SetChannelAttribute   ("Delay", StringValue ("5ms"));
   PointToPointHelper pointToPointLeaf2;
   pointToPointLeaf2.SetDeviceAttribute    ("DataRate", StringValue ("10Mbps"));
-  pointToPointLeaf2.SetChannelAttribute   ("Delay", StringValue ("5000ms"));
+  pointToPointLeaf2.SetChannelAttribute   ("Delay", StringValue ("50ms"));
   PointToPointDumbbellHelper d (nLeftLeaf, 
                                 pointToPointLeaf1,
                                 pointToPointLeaf2,
@@ -89,15 +87,26 @@ int main (int argc, char *argv[])
                          Ipv4AddressHelper ("10.3.1.0", "255.255.255.0"));
 
   uint32_t numFlows = d.RightCount(); // Adjust as needed
-  
+
   for (uint32_t i = 0; i < numFlows; ++i)
   {
-      BulkSendHelper clientHelper("ns3::TcpSocketFactory", Address ());
-      clientHelper.SetAttribute("Remote", AddressValue(InetSocketAddress(d.GetLeftIpv4Address(i), 1000)));
-      ApplicationContainer clientApp = clientHelper.Install(d.GetRight(i));
-      clientApp.Add(clientApp);
-  }
-    
+    // Select sender side port
+    uint16_t port = 50001;
+ 
+    // Install application on the sender
+    BulkSendHelper source("ns3::TcpSocketFactory", InetSocketAddress(d.GetLeftIpv4Address(i), port));
+    source.SetAttribute("MaxBytes", UintegerValue(0));
+    ApplicationContainer sourceApps = source.Install(d.GetRight(i));
+    sourceApps.Start(Seconds(0.00));
+    // Hook trace source after application starts
+    sourceApps.Stop(stopTime);
+ 
+    // Install application on the receiver
+    PacketSinkHelper sink("ns3::TcpSocketFactory", InetSocketAddress(Ipv4Address::GetAny(), port));
+    ApplicationContainer sinkApps = sink.Install(d.GetLeft(i));
+    sinkApps.Start(Seconds(0.0));
+    sinkApps.Stop(stopTime);
+  }  
   // Set the bounding box for animation
   d.BoundingBox (1, 1, 100, 100);
 

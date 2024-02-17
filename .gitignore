@@ -2,6 +2,8 @@
 !/ns-3.40/PlotScripts/*
 !/ns-3.40/scratch/*
 !.gitignore
+!/ns-3.40/src/point-to-point-layout/model/point-to-point-dumbbell.h
+!/ns-3.40/src/point-to-point-layout/model/point-to-point-dumbbell.cc
 
 !*/
 ns-3.40/scratch/scratch-simulator.cc
