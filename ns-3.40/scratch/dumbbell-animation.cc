@@ -17,49 +17,69 @@
  */
 
 #include <iostream>
-#include "dumbbel_help/point-to-point-dumbbell.h"
 #include "ns3/core-module.h"
 #include "ns3/network-module.h"
 #include "ns3/internet-module.h"
-#include "ns3/point-to-point-module.h"
+#include "ns3/point-to-point-module.h" // TODO in this install stack quic
 #include "ns3/netanim-module.h"
 #include "ns3/applications-module.h"
 #include "ns3/point-to-point-layout-module.h"
 #include "ns3/bulk-send-helper.h"
 #include "ns3/tcp-bbr.h"
+#include "ns3/flow-monitor-module.h" 
+#include "ns3/quic-helper.h"
+#include "ns3/quic-socket-factory.h"
+#include "ns3/tcp-bbr.h"
 #include "ns3/flow-monitor-module.h"
+#include "ns3/quic-module.h"
+#include "ns3/quic-client-server-helper.h"
 
 using namespace ns3;
 
 int main (int argc, char *argv[])
 {
+  std::string pacingRate = "10Mbps";
+
   //Config::SetDefault ("ns3::OnOffApplication::PacketSize", UintegerValue (512));
   //Config::SetDefault ("ns3::OnOffApplication::DataRate", StringValue ("500kb/s"));
-  Config::SetDefault("ns3::TcpL4Protocol::SocketType", StringValue("ns3::TcpBbr"));
+  //Config::SetDefault("ns3::TcpL4Protocol::SocketType", StringValue("ns3::TcpBbr"));
     
   // The maximum send buffer size is set to 4194304 bytes (4MB) and the
   // maximum receive buffer size is set to 6291456 bytes (6MB) in the Linux
   // kernel. The same buffer sizes are used as default in this example.
-  Config::SetDefault("ns3::TcpSocket::SndBufSize", UintegerValue(4194304));
+  /*Config::SetDefault("ns3::TcpSocket::SndBufSize", UintegerValue(4194304));
   Config::SetDefault("ns3::TcpSocket::RcvBufSize", UintegerValue(6291456));
   Config::SetDefault("ns3::TcpSocket::InitialCwnd", UintegerValue(10));
   Config::SetDefault("ns3::TcpSocket::DelAckCount", UintegerValue(2));
   Config::SetDefault("ns3::TcpSocket::SegmentSize", UintegerValue(1448));
   Config::SetDefault("ns3::DropTailQueue<Packet>::MaxSize", QueueSizeValue(QueueSize("1p")));
-  Config::SetDefault ("ns3::TcpL4Protocol::SocketType", StringValue ("ns3::TcpBbr"));
+  Config::SetDefault ("ns3::TcpL4Protocol::SocketType", StringValue ("ns3::TcpBbr"));*/
+  Config::SetDefault ("ns3::TcpSocketState::MaxPacingRate", StringValue (pacingRate));
+  Config::SetDefault ("ns3::TcpSocketState::EnablePacing", BooleanValue (true));
   Time stopTime = Seconds(100);
   uint32_t    nLeaf = 2; // If non-zero, number of both left and right
 
   uint32_t    nLeftLeaf = nLeaf;
   uint32_t    nRightLeaf = nLeaf;
   std::string animFile = "dumbbell-animation.xml" ;  // Name of file for animation output
-
+  bool tracing = true;
+  uint32_t maxBytes = 0;
+  uint32_t QUICFlows = 1;
+  bool isPacingEnabled = true;
+  uint32_t maxPackets = 0;
   CommandLine cmd;
   cmd.AddValue ("nLeftLeaf", "Number of left side leaf nodes", nLeftLeaf);
   cmd.AddValue ("nRightLeaf","Number of right side leaf nodes", nRightLeaf);
   cmd.AddValue ("nLeaf",     "Number of left and right side leaf nodes", nLeaf);
   cmd.AddValue ("animFile",  "File Name for Animation Output", animFile);
-
+  cmd.AddValue ("tracing", "Flag to enable/disable tracing", tracing);
+  cmd.AddValue ("maxBytes",
+                "Total number of bytes for application to send", maxBytes);
+  cmd.AddValue ("maxPackets",
+                "Total number of bytes for application to send", maxPackets);
+  cmd.AddValue ("QUICFlows", "Number of application flows between sender and receiver", QUICFlows);
+  cmd.AddValue ("Pacing", "Flag to enable/disable pacing in QUIC", isPacingEnabled);
+  cmd.AddValue ("PacingRate", "Max Pacing Rate in bps", pacingRate);
   cmd.Parse (argc,argv);
 
   // Create the point-to-point link helpers
@@ -80,8 +100,8 @@ int main (int argc, char *argv[])
 
   
   // Install Stack
-  InternetStackHelper stack;
-  d.InstallStack (stack);
+  QuicHelper stack;
+  //TODO d.InstallStackQuic(stack);
 
   // Assign IP Addresses
   d.AssignIpv4Addresses (Ipv4AddressHelper ("10.1.1.0", "255.255.255.0"),
@@ -89,14 +109,14 @@ int main (int argc, char *argv[])
                          Ipv4AddressHelper ("10.3.1.0", "255.255.255.0"));
 
   uint32_t numFlows = d.RightCount(); // Adjust as needed
-
+  
   for (uint32_t i = 0; i < numFlows; ++i)
   {
-    // Select sender side port
-    uint16_t port = 50001;
- 
+// Select sender side port
+    uint16_t port = 10000 + i;
+    
     // Install application on the sender
-    BulkSendHelper source("ns3::TcpSocketFactory", InetSocketAddress(d.GetLeftIpv4Address(i), port));
+    BulkSendHelper source("ns3::QuicSocketFactory", InetSocketAddress(d.GetLeftIpv4Address(i), port));
     source.SetAttribute("MaxBytes", UintegerValue(0));
     ApplicationContainer sourceApps = source.Install(d.GetRight(i));
     sourceApps.Start(Seconds(0.00));
@@ -104,7 +124,7 @@ int main (int argc, char *argv[])
     sourceApps.Stop(stopTime);
  
     // Install application on the receiver
-    PacketSinkHelper sink("ns3::TcpSocketFactory", InetSocketAddress(Ipv4Address::GetAny(), port));
+    PacketSinkHelper sink("ns3::QuicSocketFactory", InetSocketAddress(Ipv4Address::GetAny(), port));
     ApplicationContainer sinkApps = sink.Install(d.GetLeft(i));
     sinkApps.Start(Seconds(0.0));
     sinkApps.Stop(stopTime);
