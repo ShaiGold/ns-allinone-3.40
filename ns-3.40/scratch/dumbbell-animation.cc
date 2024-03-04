@@ -56,7 +56,7 @@ int main (int argc, char *argv[])
   Config::SetDefault ("ns3::TcpL4Protocol::SocketType", StringValue ("ns3::TcpBbr"));*/
   Config::SetDefault ("ns3::TcpSocketState::MaxPacingRate", StringValue (pacingRate));
   Config::SetDefault ("ns3::TcpSocketState::EnablePacing", BooleanValue (true));
-  Time stopTime = Seconds(100);
+  Time stopTime = Seconds(1);
   uint32_t    nLeaf = 2; // If non-zero, number of both left and right
 
   uint32_t    nLeftLeaf = nLeaf;
@@ -72,14 +72,14 @@ int main (int argc, char *argv[])
   cmd.AddValue ("nRightLeaf","Number of right side leaf nodes", nRightLeaf);
   cmd.AddValue ("nLeaf",     "Number of left and right side leaf nodes", nLeaf);
   cmd.AddValue ("animFile",  "File Name for Animation Output", animFile);
-  cmd.AddValue ("tracing", "Flag to enable/disable tracing", tracing);
+  /*cmd.AddValue ("tracing", "Flag to enable/disable tracing", tracing);
   cmd.AddValue ("maxBytes",
                 "Total number of bytes for application to send", maxBytes);
   cmd.AddValue ("maxPackets",
                 "Total number of bytes for application to send", maxPackets);
   cmd.AddValue ("QUICFlows", "Number of application flows between sender and receiver", QUICFlows);
   cmd.AddValue ("Pacing", "Flag to enable/disable pacing in QUIC", isPacingEnabled);
-  cmd.AddValue ("PacingRate", "Max Pacing Rate in bps", pacingRate);
+  cmd.AddValue ("PacingRate", "Max Pacing Rate in bps", pacingRate);*/
   cmd.Parse (argc,argv);
 
   // Create the point-to-point link helpers
@@ -91,7 +91,7 @@ int main (int argc, char *argv[])
   pointToPointLeaf1.SetChannelAttribute   ("Delay", StringValue ("5ms"));
   PointToPointHelper pointToPointLeaf2;
   pointToPointLeaf2.SetDeviceAttribute    ("DataRate", StringValue ("10Mbps"));
-  pointToPointLeaf2.SetChannelAttribute   ("Delay", StringValue ("50ms"));
+  pointToPointLeaf2.SetChannelAttribute   ("Delay", StringValue ("5ms"));
   PointToPointDumbbellHelper d (nLeftLeaf, 
                                 pointToPointLeaf1,
                                 pointToPointLeaf2,
@@ -101,6 +101,7 @@ int main (int argc, char *argv[])
   
   // Install Stack
   QuicHelper stack;
+  d.InstallStackQuic(stack);
   //TODO d.InstallStackQuic(stack);
 
   // Assign IP Addresses

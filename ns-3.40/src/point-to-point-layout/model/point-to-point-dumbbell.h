@@ -26,7 +26,7 @@
 #include "ns3/ipv6-address-helper.h"
 #include "ns3/ipv6-interface-container.h"
 #include "ns3/point-to-point-helper.h"
-
+#include "ns3/quic-helper.h"
 #include <string>
 
 namespace ns3
@@ -140,6 +140,13 @@ class PointToPointDumbbellHelper
      *              on every node in the dumbbell
      */
     void InstallStack(InternetStackHelper stack);
+
+    
+    /**
+     * \param stack an InternetStackHelper which is used to install
+     *              on every node in the dumbbell
+     */
+    void InstallStackQuic(QuicHelper stack);
 
     /**
      * \param leftIp Ipv4AddressHelper to assign Ipv4 addresses to the

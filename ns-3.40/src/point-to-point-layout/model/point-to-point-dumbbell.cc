@@ -25,7 +25,7 @@
 #include "ns3/node-list.h"
 #include "ns3/point-to-point-net-device.h"
 #include "ns3/vector.h"
-
+#include "ns3/quic-helper.h"
 #include <cmath>
 #include <iostream>
 #include <sstream>
@@ -174,6 +174,15 @@ PointToPointDumbbellHelper::InstallStack(InternetStackHelper stack)
     stack.Install(m_leftLeaf);
     stack.Install(m_rightLeaf);
 }
+
+void
+PointToPointDumbbellHelper::InstallStackQuic(QuicHelper stack)
+{
+    stack.InstallQuic(m_routers);
+    stack.InstallQuic(m_leftLeaf);
+    stack.InstallQuic(m_rightLeaf);
+}
+
 
 void
 PointToPointDumbbellHelper::AssignIpv4Addresses(Ipv4AddressHelper leftIp,
