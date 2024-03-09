@@ -29,7 +29,6 @@
 #include "ns3/flow-monitor-module.h" 
 #include "ns3/quic-helper.h"
 #include "ns3/quic-socket-factory.h"
-#include "ns3/tcp-bbr.h"
 #include "ns3/flow-monitor-module.h"
 #include "ns3/quic-module.h"
 #include "ns3/quic-client-server-helper.h"
@@ -51,12 +50,14 @@ int main (int argc, char *argv[])
   Config::SetDefault("ns3::TcpSocket::RcvBufSize", UintegerValue(6291456));
   Config::SetDefault("ns3::TcpSocket::InitialCwnd", UintegerValue(10));
   Config::SetDefault("ns3::TcpSocket::DelAckCount", UintegerValue(2));
-  Config::SetDefault("ns3::TcpSocket::SegmentSize", UintegerValue(1448));
+  Config::SetDefault("ns3::TcpSocket::SegmentSize", UintegerValue(1448));*/
   Config::SetDefault("ns3::DropTailQueue<Packet>::MaxSize", QueueSizeValue(QueueSize("1p")));
-  Config::SetDefault ("ns3::TcpL4Protocol::SocketType", StringValue ("ns3::TcpBbr"));*/
+  Config::SetDefault ("ns3::TcpL4Protocol::SocketType", StringValue ("ns3::QuicBbr"));
+  Config::SetDefault ("ns3::QuicL4Protocol::SocketType", StringValue ("ns3::QuicBbr"));
+
   Config::SetDefault ("ns3::TcpSocketState::MaxPacingRate", StringValue (pacingRate));
   Config::SetDefault ("ns3::TcpSocketState::EnablePacing", BooleanValue (true));
-  Time stopTime = Seconds(1);
+  Time stopTime = Seconds(10);
   uint32_t    nLeaf = 2; // If non-zero, number of both left and right
 
   uint32_t    nLeftLeaf = nLeaf;
@@ -91,7 +92,7 @@ int main (int argc, char *argv[])
   pointToPointLeaf1.SetChannelAttribute   ("Delay", StringValue ("5ms"));
   PointToPointHelper pointToPointLeaf2;
   pointToPointLeaf2.SetDeviceAttribute    ("DataRate", StringValue ("10Mbps"));
-  pointToPointLeaf2.SetChannelAttribute   ("Delay", StringValue ("5ms"));
+  pointToPointLeaf2.SetChannelAttribute   ("Delay", StringValue ("20ms"));
   PointToPointDumbbellHelper d (nLeftLeaf, 
                                 pointToPointLeaf1, //left first leaf to router
                                 pointToPointLeaf2, // left second leaf to router
