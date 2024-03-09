@@ -20,7 +20,7 @@
 #include "ns3/core-module.h"
 #include "ns3/network-module.h"
 #include "ns3/internet-module.h"
-#include "ns3/point-to-point-module.h" // TODO in this install stack quic
+#include "ns3/point-to-point-module.h"
 #include "ns3/netanim-module.h"
 #include "ns3/applications-module.h"
 #include "ns3/point-to-point-layout-module.h"
@@ -64,7 +64,7 @@ int main (int argc, char *argv[])
   std::string animFile = "dumbbell-animation.xml" ;  // Name of file for animation output
   bool tracing = true;
   uint32_t maxBytes = 0;
-  uint32_t QUICFlows = 1;
+  uint32_t QUICFlows = nLeaf;
   bool isPacingEnabled = true;
   uint32_t maxPackets = 0;
   CommandLine cmd;
@@ -72,14 +72,14 @@ int main (int argc, char *argv[])
   cmd.AddValue ("nRightLeaf","Number of right side leaf nodes", nRightLeaf);
   cmd.AddValue ("nLeaf",     "Number of left and right side leaf nodes", nLeaf);
   cmd.AddValue ("animFile",  "File Name for Animation Output", animFile);
-  /*cmd.AddValue ("tracing", "Flag to enable/disable tracing", tracing);
+  cmd.AddValue ("tracing", "Flag to enable/disable tracing", tracing);
   cmd.AddValue ("maxBytes",
                 "Total number of bytes for application to send", maxBytes);
   cmd.AddValue ("maxPackets",
                 "Total number of bytes for application to send", maxPackets);
   cmd.AddValue ("QUICFlows", "Number of application flows between sender and receiver", QUICFlows);
   cmd.AddValue ("Pacing", "Flag to enable/disable pacing in QUIC", isPacingEnabled);
-  cmd.AddValue ("PacingRate", "Max Pacing Rate in bps", pacingRate);*/
+  cmd.AddValue ("PacingRate", "Max Pacing Rate in bps", pacingRate);
   cmd.Parse (argc,argv);
 
   // Create the point-to-point link helpers
@@ -93,27 +93,27 @@ int main (int argc, char *argv[])
   pointToPointLeaf2.SetDeviceAttribute    ("DataRate", StringValue ("10Mbps"));
   pointToPointLeaf2.SetChannelAttribute   ("Delay", StringValue ("5ms"));
   PointToPointDumbbellHelper d (nLeftLeaf, 
-                                pointToPointLeaf1,
-                                pointToPointLeaf2,
-                                nRightLeaf, pointToPointLeaf1,
+                                pointToPointLeaf1, //left first leaf to router
+                                pointToPointLeaf2, // left second leaf to router
+                                nRightLeaf, 
+                                pointToPointLeaf1, // right leafs to router
                                 pointToPointRouter);
 
   
   // Install Stack
   QuicHelper stack;
   d.InstallStackQuic(stack);
-  //TODO d.InstallStackQuic(stack);
 
   // Assign IP Addresses
   d.AssignIpv4Addresses (Ipv4AddressHelper ("10.1.1.0", "255.255.255.0"),
                          Ipv4AddressHelper ("10.2.1.0", "255.255.255.0"),
                          Ipv4AddressHelper ("10.3.1.0", "255.255.255.0"));
 
-  uint32_t numFlows = d.RightCount(); // Adjust as needed
+  uint32_t numFlows = d.RightCount();
   
   for (uint32_t i = 0; i < numFlows; ++i)
   {
-// Select sender side port
+    // Select sender side port
     uint16_t port = 10000 + i;
     
     // Install application on the sender
@@ -136,7 +136,7 @@ int main (int argc, char *argv[])
   // Create the animation object and configure for specified output
   AnimationInterface anim (animFile);
   anim.EnablePacketMetadata (); // Optional
-  anim.EnableIpv4L3ProtocolCounters (Seconds (0), Seconds (10)); // Optional
+  anim.EnableIpv4L3ProtocolCounters (Seconds (0), stopTime); // Optional
   
   // Set up the acutal simulation
   Ipv4GlobalRoutingHelper::PopulateRoutingTables ();

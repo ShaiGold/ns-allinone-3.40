@@ -143,7 +143,7 @@ class PointToPointDumbbellHelper
 
     
     /**
-     * \param stack an InternetStackHelper which is used to install
+     * \param stack an QuicHelper which is used to install
      *              on every node in the dumbbell
      */
     void InstallStackQuic(QuicHelper stack);
