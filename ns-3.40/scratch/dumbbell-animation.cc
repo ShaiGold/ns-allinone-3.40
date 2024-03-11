@@ -34,6 +34,37 @@
 #include "ns3/quic-client-server-helper.h"
 
 using namespace ns3;
+using namespace ns3::SystemPath;
+
+std::string dir;
+std::ofstream throughput;
+std::ofstream queueSize;
+
+uint32_t prev[4] = {0};
+Time prevTime[4] = {Seconds(0)};
+
+//calculate throughput
+static void
+TraceThroughput(Ptr<FlowMonitor> monitor, Ptr<Ipv4FlowClassifier> classifier)
+{
+    FlowMonitor::FlowStatsContainer stats = monitor->GetFlowStats();
+    if (!stats.empty())
+    {
+
+        for (auto itr = stats.begin();itr != stats.end(); itr++){
+            Ipv4FlowClassifier::FiveTuple t = classifier->FindFlow(itr->first);
+            Time curTime = Now();
+            throughput << curTime.ToDouble(Time::NS) << " " << t.sourceAddress << " -> " << t.destinationAddress << " "
+                   << 8 * (itr->second.txBytes - prev[itr->first -1]) / ((curTime - prevTime[itr->first-1]).ToDouble(Time::US))
+                   << std::endl;
+            prevTime[itr->first-1] = curTime;
+            prev[itr->first-1] = itr->second.txBytes;
+        }
+        
+    }
+    Simulator::Schedule(Seconds(0.2), &TraceThroughput, monitor, classifier);
+}
+
 
 int main (int argc, char *argv[])
 {
@@ -57,7 +88,7 @@ int main (int argc, char *argv[])
 
   Config::SetDefault ("ns3::TcpSocketState::MaxPacingRate", StringValue (pacingRate));
   Config::SetDefault ("ns3::TcpSocketState::EnablePacing", BooleanValue (true));
-  Time stopTime = Seconds(10);
+  Time stopTime = Seconds(25);
   uint32_t    nLeaf = 2; // If non-zero, number of both left and right
 
   uint32_t    nLeftLeaf = nLeaf;
@@ -92,7 +123,7 @@ int main (int argc, char *argv[])
   pointToPointLeaf1.SetChannelAttribute   ("Delay", StringValue ("5ms"));
   PointToPointHelper pointToPointLeaf2;
   pointToPointLeaf2.SetDeviceAttribute    ("DataRate", StringValue ("10Mbps"));
-  pointToPointLeaf2.SetChannelAttribute   ("Delay", StringValue ("20ms"));
+  pointToPointLeaf2.SetChannelAttribute   ("Delay", StringValue ("10ms"));
   PointToPointDumbbellHelper d (nLeftLeaf, 
                                 pointToPointLeaf1, //left first leaf to router
                                 pointToPointLeaf2, // left second leaf to router
@@ -139,13 +170,22 @@ int main (int argc, char *argv[])
   anim.EnablePacketMetadata (); // Optional
   anim.EnableIpv4L3ProtocolCounters (Seconds (0), stopTime); // Optional
   
+  dir = "bbr-results/";
+  MakeDirectories(dir);
+  throughput.open(dir + "/throughput.dat", std::ios::out);
+
   // Set up the acutal simulation
   Ipv4GlobalRoutingHelper::PopulateRoutingTables ();
   Ptr<FlowMonitor> flowMonitor;
   FlowMonitorHelper flowHelper;
   flowMonitor = flowHelper.InstallAll();
 
+  Ptr<Ipv4FlowClassifier> classifier = DynamicCast<Ipv4FlowClassifier>(flowHelper.GetClassifier());
+  FlowMonitor::FlowStatsContainer stats = flowMonitor->GetFlowStats();
+
+  Simulator::Schedule(Seconds(0 + 0.000001), &TraceThroughput, flowMonitor, classifier);
   Simulator::Stop(stopTime);
+  
 
   Simulator::Run ();
   std::cout << "Animation Trace file created:" << animFile.c_str ()<< std::endl;
