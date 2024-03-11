@@ -44,9 +44,11 @@ throughput1 = np.array([throughput for time, throughput in source_1_data])
 throughput2 = np.array([throughput for time, throughput in source_2_data])
 time_arr = [time for time, throughput in source_1_data]
 
-ax2.plot(time_arr, throughput1 / throughput2)
+ax2.plot(time_arr, throughput1 / throughput2, label='Throughput Ratio')
+ax2.axhline(y=1, color='red', linestyle='--', label='Throughput Ratio = 1')
 ax2.set_xlabel('Time (s)')
 ax2.set_ylabel('Throughput1/Throughput2')
+ax2.legend()
 
 # Adjust layout to prevent overlapping
 plt.tight_layout()
