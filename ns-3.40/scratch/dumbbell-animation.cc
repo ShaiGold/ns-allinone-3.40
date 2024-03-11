@@ -62,7 +62,7 @@ TraceThroughput(Ptr<FlowMonitor> monitor, Ptr<Ipv4FlowClassifier> classifier)
         }
         
     }
-    Simulator::Schedule(Seconds(0.2), &TraceThroughput, monitor, classifier);
+    Simulator::Schedule(Seconds(0.1), &TraceThroughput, monitor, classifier);
 }
 
 
@@ -123,7 +123,7 @@ int main (int argc, char *argv[])
   pointToPointLeaf1.SetChannelAttribute   ("Delay", StringValue ("5ms"));
   PointToPointHelper pointToPointLeaf2;
   pointToPointLeaf2.SetDeviceAttribute    ("DataRate", StringValue ("10Mbps"));
-  pointToPointLeaf2.SetChannelAttribute   ("Delay", StringValue ("10ms"));
+  pointToPointLeaf2.SetChannelAttribute   ("Delay", StringValue ("15ms"));
   PointToPointDumbbellHelper d (nLeftLeaf, 
                                 pointToPointLeaf1, //left first leaf to router
                                 pointToPointLeaf2, // left second leaf to router
@@ -147,19 +147,19 @@ int main (int argc, char *argv[])
   {
     // Select sender side port
     uint16_t port = 10000 + i;
-    
+    Time start_time = Seconds(0);
     // Install application on the sender
     BulkSendHelper source("ns3::QuicSocketFactory", InetSocketAddress(d.GetLeftIpv4Address(i), port));
     source.SetAttribute("MaxBytes", UintegerValue(0));
     ApplicationContainer sourceApps = source.Install(d.GetRight(i));
-    sourceApps.Start(Seconds(0.00));
+    sourceApps.Start(start_time);
     // Hook trace source after application starts
     sourceApps.Stop(stopTime);
  
     // Install application on the receiver
     PacketSinkHelper sink("ns3::QuicSocketFactory", InetSocketAddress(Ipv4Address::GetAny(), port));
     ApplicationContainer sinkApps = sink.Install(d.GetLeft(i));
-    sinkApps.Start(Seconds(0.0));
+    sinkApps.Start(start_time);
     sinkApps.Stop(stopTime);
   }  
   // Set the bounding box for animation
