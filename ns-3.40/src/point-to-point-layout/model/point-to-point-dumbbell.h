@@ -66,12 +66,9 @@ class PointToPointDumbbellHelper
                                uint32_t nRightLeaf,
                                PointToPointHelper rightHelper,
                                PointToPointHelper bottleneckHelper);
-    PointToPointDumbbellHelper(uint32_t nLeftLeaf,
-                               PointToPointHelper leftHelper0,
-                               PointToPointHelper leftHelper1,
-                               
-                               uint32_t nRightLeaf,
-                               PointToPointHelper rightHelper,
+    PointToPointDumbbellHelper(uint32_t nLeaf,
+                               PointToPointHelper leaf_to_router0,
+                               PointToPointHelper leaf_to_router1,
                                PointToPointHelper bottleneckHelper);
 
     ~PointToPointDumbbellHelper();

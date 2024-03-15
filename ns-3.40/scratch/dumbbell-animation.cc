@@ -82,7 +82,7 @@ int main (int argc, char *argv[])
   Config::SetDefault("ns3::TcpSocket::InitialCwnd", UintegerValue(10));
   Config::SetDefault("ns3::TcpSocket::DelAckCount", UintegerValue(2));
   Config::SetDefault("ns3::TcpSocket::SegmentSize", UintegerValue(1448));*/
-  Config::SetDefault("ns3::DropTailQueue<Packet>::MaxSize", QueueSizeValue(QueueSize("1p")));
+  Config::SetDefault("ns3::DropTailQueue<Packet>::MaxSize", QueueSizeValue(QueueSize("500p")));
   Config::SetDefault ("ns3::TcpL4Protocol::SocketType", StringValue ("ns3::QuicBbr"));
   Config::SetDefault ("ns3::QuicL4Protocol::SocketType", StringValue ("ns3::QuicBbr"));
 
@@ -119,16 +119,14 @@ int main (int argc, char *argv[])
   pointToPointRouter.SetDeviceAttribute  ("DataRate", StringValue ("10Mbps"));
   pointToPointRouter.SetChannelAttribute ("Delay", StringValue ("1ms"));
   PointToPointHelper pointToPointLeaf1;
-  pointToPointLeaf1.SetDeviceAttribute    ("DataRate", StringValue ("10Mbps"));
+  pointToPointLeaf1.SetDeviceAttribute    ("DataRate", StringValue ("1000Mbps"));
   pointToPointLeaf1.SetChannelAttribute   ("Delay", StringValue ("5ms"));
   PointToPointHelper pointToPointLeaf2;
-  pointToPointLeaf2.SetDeviceAttribute    ("DataRate", StringValue ("10Mbps"));
-  pointToPointLeaf2.SetChannelAttribute   ("Delay", StringValue ("15ms"));
-  PointToPointDumbbellHelper d (nLeftLeaf, 
-                                pointToPointLeaf1, //left first leaf to router
-                                pointToPointLeaf2, // left second leaf to router
-                                nRightLeaf, 
-                                pointToPointLeaf1, // right leafs to router
+  pointToPointLeaf2.SetDeviceAttribute    ("DataRate", StringValue ("1000Mbps"));
+  pointToPointLeaf2.SetChannelAttribute   ("Delay", StringValue ("10ms"));
+  PointToPointDumbbellHelper d (nLeaf,
+                                pointToPointLeaf1, //leaf0-router and router - leaf0 
+                                pointToPointLeaf2, //leaf1-router and router - leaf1
                                 pointToPointRouter);
 
   

@@ -35,41 +35,36 @@ namespace ns3
 
 NS_LOG_COMPONENT_DEFINE("PointToPointDumbbellHelper");
 
-PointToPointDumbbellHelper::PointToPointDumbbellHelper(uint32_t nLeftLeaf,
-                                                       PointToPointHelper leftHelper0,
-                                                        PointToPointHelper leftHelper1,
-                                                       uint32_t nRightLeaf,
-                                                       PointToPointHelper rightHelper,
+PointToPointDumbbellHelper::PointToPointDumbbellHelper(uint32_t nLeaf,
+                                                       PointToPointHelper leaf_to_router0,
+                                                       PointToPointHelper leaf_to_router1,
                                                        PointToPointHelper bottleneckHelper)
 {
     // Create the bottleneck routers
     m_routers.Create(2);
     // Create the leaf nodes
-    m_leftLeaf.Create(nLeftLeaf);
-    m_rightLeaf.Create(nRightLeaf);
+    m_leftLeaf.Create(nLeaf);
+    m_rightLeaf.Create(nLeaf);
 
     // Add the link connecting routers
     m_routerDevices = bottleneckHelper.Install(m_routers);
     // Add the left side links
-    for (uint32_t i = 0; i < nLeftLeaf; ++i)
+    for (uint32_t i = 0; i < nLeaf; ++i)
     {
-        if (i != 1){ 
-            NetDeviceContainer c = leftHelper0.Install(m_routers.Get(0), m_leftLeaf.Get(i));
-            m_leftRouterDevices.Add(c.Get(0));
-            m_leftLeafDevices.Add(c.Get(1));
+        NetDeviceContainer c_left, c_right;
+        if (i == 1){ 
+            c_left = leaf_to_router1.Install(m_routers.Get(0), m_leftLeaf.Get(i));
+            c_right = leaf_to_router1.Install(m_routers.Get(1), m_rightLeaf.Get(i));
         }
         else{
-            NetDeviceContainer c = leftHelper1.Install(m_routers.Get(0), m_leftLeaf.Get(i));
-            m_leftRouterDevices.Add(c.Get(0));
-            m_leftLeafDevices.Add(c.Get(1));
+            c_left = leaf_to_router0.Install(m_routers.Get(0), m_leftLeaf.Get(i));
+            c_right = leaf_to_router0.Install(m_routers.Get(1), m_rightLeaf.Get(i));
         }
-    }
-    // Add the right side links
-    for (uint32_t i = 0; i < nRightLeaf; ++i)
-    {
-        NetDeviceContainer c = rightHelper.Install(m_routers.Get(1), m_rightLeaf.Get(i));
-        m_rightRouterDevices.Add(c.Get(0));
-        m_rightLeafDevices.Add(c.Get(1));
+        m_leftRouterDevices.Add(c_left.Get(0));
+        m_leftLeafDevices.Add(c_left.Get(1));
+
+        m_rightRouterDevices.Add(c_right.Get(0));
+        m_rightLeafDevices.Add(c_right.Get(1));
     }
 }
 PointToPointDumbbellHelper::PointToPointDumbbellHelper(uint32_t nLeftLeaf,
