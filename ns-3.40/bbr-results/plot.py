@@ -45,11 +45,12 @@ throughput2 = np.array([throughput for time, throughput in source_2_data])
 time_arr = [time for time, throughput in source_1_data]
 
 ax2.plot(time_arr, throughput1 / throughput2, label='Throughput Ratio')
-ax2.axhline(y=1, color='red', linestyle='--', label='Throughput Ratio = 1')
+ax2.axhline(y=np.median(throughput1)/np.median(throughput2), color='red', linestyle='--', label='Median(throughput1) / Median(throughput2)')
 ax2.set_xlabel('Time (s)')
 ax2.set_ylabel('Throughput1/Throughput2')
 ax2.legend()
-
+print('Median(throughput1) / Median(throughput2):',np.median(throughput1)/np.median(throughput2)) #0.19203690216071864
+print('utilization', (np.average(throughput1)+np.average(throughput2))/10)
 # Adjust layout to prevent overlapping
 plt.tight_layout()
 

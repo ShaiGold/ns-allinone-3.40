@@ -82,7 +82,7 @@ int main (int argc, char *argv[])
   Config::SetDefault("ns3::TcpSocket::InitialCwnd", UintegerValue(10));
   Config::SetDefault("ns3::TcpSocket::DelAckCount", UintegerValue(2));
   Config::SetDefault("ns3::TcpSocket::SegmentSize", UintegerValue(1448));*/
-  Config::SetDefault("ns3::DropTailQueue<Packet>::MaxSize", QueueSizeValue(QueueSize("500p")));
+  Config::SetDefault("ns3::DropTailQueue<Packet>::MaxSize", QueueSizeValue(QueueSize("1000p")));
   Config::SetDefault ("ns3::TcpL4Protocol::SocketType", StringValue ("ns3::QuicBbr"));
   Config::SetDefault ("ns3::QuicL4Protocol::SocketType", StringValue ("ns3::QuicBbr"));
 
@@ -117,7 +117,7 @@ int main (int argc, char *argv[])
   // Create the point-to-point link helpers
   PointToPointHelper pointToPointRouter;
   pointToPointRouter.SetDeviceAttribute  ("DataRate", StringValue ("10Mbps"));
-  pointToPointRouter.SetChannelAttribute ("Delay", StringValue ("1ms"));
+  pointToPointRouter.SetChannelAttribute ("Delay", StringValue ("5ms"));
   PointToPointHelper pointToPointLeaf1;
   pointToPointLeaf1.SetDeviceAttribute    ("DataRate", StringValue ("1000Mbps"));
   pointToPointLeaf1.SetChannelAttribute   ("Delay", StringValue ("5ms"));

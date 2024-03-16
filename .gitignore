@@ -6,5 +6,6 @@
 !/ns-3.40/src/point-to-point-layout/model/point-to-point-dumbbell.cc
 !/ns-3.40/bbr-results/plot.py
 !*/
+!/ns-3.40/src/quic/model/quic-bbr.cc
 ns-3.40/scratch/scratch-simulator.cc
 ns-3.40/scratch/CMakeLists.txt
